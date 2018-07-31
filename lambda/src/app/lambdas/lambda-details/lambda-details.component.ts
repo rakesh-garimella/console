@@ -820,6 +820,9 @@ export class LambdaDetailsComponent implements AfterViewInit {
     } else if (this.newLabel) {
       this.wrongLabel = this.newLabel;
       this.isLambdaFormValid = false;
+    } else if (!this.newLabel) {
+      this.wrongLabel = false;
+      this.isLambdaFormValid = true;
     }
   }
 
