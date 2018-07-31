@@ -854,10 +854,13 @@ export class LambdaDetailsComponent implements AfterViewInit {
       this.lambda.metadata.name === ''
         ? false
         : true;
-
-    this.isFunctionNameInvalid
-      ? (this.isLambdaFormValid = false)
-      : (this.isLambdaFormValid = true);
+    if (!this.lambda.metadata.name || this.isFunctionNameInvalid) {
+      this.editor.setReadOnly(true);
+      this.isLambdaFormValid = false;
+    } else {
+      this.editor.setReadOnly(false);
+      this.isLambdaFormValid = true;
+    }
   }
 
   onMouseOver(trigger: ITrigger): void {
