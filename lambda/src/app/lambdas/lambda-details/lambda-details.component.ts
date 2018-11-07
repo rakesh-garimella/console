@@ -72,6 +72,21 @@ export class LambdaDetailsComponent implements AfterViewInit {
       kind: 'nodejs8',
     },
   ];
+
+  sizes: object[] = [
+    {
+      acemode: 'javascript',
+      size: 'S(Replicas: 2, Memory: 128Mi, CPU: 0.1)',
+    },
+    {
+      acemode: 'javascript',
+      size: 'M(Replicas: 5, Memory: 256Mi, CPU: 0.5)',
+    },
+    {
+      acemode: 'javascript',
+      size: 'L(Replicas: 10, Memory: 512Mi, CPU: 1.0)',
+    },
+  ];
   theme: string;
   @ViewChild('fetchTokenModal') fetchTokenModal: FetchTokenModalComponent;
   @ViewChild('eventTriggerChooserModal')
@@ -89,6 +104,7 @@ export class LambdaDetailsComponent implements AfterViewInit {
   toggleTrigger = false;
   toggleTriggerType = false;
   typeDropdownHidden = true;
+  sizeDropdownHidden = true;
   isLambdaFormValid = true;
   showHTTPURL: HTTPEndpoint = null;
   httpURL = '';
@@ -220,6 +236,8 @@ export class LambdaDetailsComponent implements AfterViewInit {
     this.kind = selectedType.kind;
     this.typeDropdownHidden = true;
   }
+
+  selectSize(selectedSize) {}
 
   onCodeChange(event) {
     const isChange = this.lambda.spec.function !== event;
@@ -696,8 +714,16 @@ export class LambdaDetailsComponent implements AfterViewInit {
     this.typeDropdownHidden = !this.typeDropdownHidden;
   }
 
+  toggleSizeDropDown() {
+    this.sizeDropdownHidden = !this.sizeDropdownHidden;
+  }
+
   closeTypeDropDown() {
     return (this.typeDropdownHidden = true);
+  }
+
+  closeSizeDropDown() {
+    return (this.sizeDropdownHidden = true);
   }
 
   closeTriggerTypeDropDown() {
