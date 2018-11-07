@@ -40,6 +40,15 @@ $hover: #008ac6;
     height: 40px;
   }
 }
+.sf-toolbar__right {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    margin-left: auto !important;
+    font-size: 1rem;
+    color: #21262c;
+    padding: 0.8em 2em 0.8em 2em;
+}
 
 .sf-trigger-list-elements {
   grid-column-start: 1;
