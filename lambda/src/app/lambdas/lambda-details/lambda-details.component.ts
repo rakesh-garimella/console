@@ -72,6 +72,37 @@ export class LambdaDetailsComponent implements AfterViewInit {
       kind: 'nodejs8',
     },
   ];
+
+  sizes: object[] = [
+    {
+      size: {
+        name: 'S',
+        memory: '128Mi',
+        cpu: '100m',
+        replicas: '2',
+        description: '',
+      },
+    },
+    {
+      size: {
+        name: 'M',
+        memory: '256Mi',
+        cpu: '500m',
+        replicas: '5',
+        description: '',
+      },
+    },
+    {
+      size: {
+        name: 'L',
+        memory: '512Mi',
+        cpu: '1.0',
+        replicas: '1000m',
+        description: '',
+      },
+    },
+  ];
+
   theme: string;
   @ViewChild('fetchTokenModal') fetchTokenModal: FetchTokenModalComponent;
   @ViewChild('eventTriggerChooserModal')
@@ -85,10 +116,12 @@ export class LambdaDetailsComponent implements AfterViewInit {
   mode = 'create';
   title = '';
   kind: string;
+  functionSize: object;
   showSample = false;
   toggleTrigger = false;
   toggleTriggerType = false;
   typeDropdownHidden = true;
+  sizeDropdownHidden = true;
   isLambdaFormValid = true;
   showHTTPURL: HTTPEndpoint = null;
   httpURL = '';
@@ -114,6 +147,7 @@ export class LambdaDetailsComponent implements AfterViewInit {
   existingHTTPEndpoint: Api;
   bindingState: Map<string, InstanceBindingState>;
   sessionId: string;
+  functionSizes = [];
 
   public issuer: string;
   public jwksUri: string;
@@ -133,6 +167,15 @@ export class LambdaDetailsComponent implements AfterViewInit {
     protected route: ActivatedRoute,
     router: Router,
   ) {
+    this.functionSizes = this.sizes.map(s => s['size']).map(s => {
+      s.description = `${s.name} (Memory: ${s.memory} CPU: ${s.cpu} Replicas: ${
+        s.replicas
+      })`;
+      return s;
+    });
+
+    this.functionSize = this.functionSizes[0];
+
     this.theme = 'eclipse';
     this.aceMode = 'javascript';
     this.aceDependencyMode = 'json';
@@ -221,6 +264,11 @@ export class LambdaDetailsComponent implements AfterViewInit {
     this.typeDropdownHidden = true;
   }
 
+  selectSize(selectedSize) {
+    this.functionSize = selectedSize;
+    this.sizeDropdownHidden = true;
+  }
+
   onCodeChange(event) {
     const isChange = this.lambda.spec.function !== event;
     this.lambda.spec.function = event;
@@ -265,6 +313,7 @@ export class LambdaDetailsComponent implements AfterViewInit {
 
   updateFunction(): void {
     this.warnUnsavedChanges(false);
+    this.updateAutoscaler();
     this.lambda.metadata.labels = this.changeLabels();
     this.lambda.spec.runtime = this.kind;
     this.lambda.spec.topic =
@@ -650,6 +699,7 @@ export class LambdaDetailsComponent implements AfterViewInit {
 
   createFunction(): void {
     this.warnUnsavedChanges(false);
+    this.updateAutoscaler();
     this.lambda.metadata.namespace = this.environment;
     this.lambda.spec.runtime = this.kind;
     if (this.selectedTriggers.length > 0) {
@@ -671,6 +721,7 @@ export class LambdaDetailsComponent implements AfterViewInit {
         }
       },
       err => {
+        console.log(err);
         this.error = err.message;
       },
     );
@@ -696,8 +747,16 @@ export class LambdaDetailsComponent implements AfterViewInit {
     this.typeDropdownHidden = !this.typeDropdownHidden;
   }
 
+  toggleSizeDropDown() {
+    this.sizeDropdownHidden = !this.sizeDropdownHidden;
+  }
+
   closeTypeDropDown() {
     return (this.typeDropdownHidden = true);
+  }
+
+  closeSizeDropDown() {
+    return (this.sizeDropdownHidden = true);
   }
 
   closeTriggerTypeDropDown() {
@@ -1090,5 +1149,35 @@ export class LambdaDetailsComponent implements AfterViewInit {
       { msg: 'luigi.set-page-dirty', dirty: hasChanges },
       '*',
     );
+  }
+
+  private updateAutoscaler() {
+    if (this.mode === 'create') {
+      const hpaName = `${this.lambda.metadata.name}-hpa`;
+      this.lambda.spec.horizontalPodAutoscaler.metadata.name = hpaName;
+      this.lambda.spec.horizontalPodAutoscaler.metadata.namespace = this.environment;
+      this.lambda.spec.horizontalPodAutoscaler.spec.scaleTargetRef.name = this.lambda.metadata.name;
+    }
+
+    // horizontalPodAutoscaler -> spec -> maxReplicas
+    //this.lambda.spec.horizontalPodAutoscaler.spec.maxReplicas = this.functionSize["replicas"];
+    console.log(
+      'this.functionSize["replicas"]' + this.functionSize['replicas'],
+    );
+    this.lambda.spec.horizontalPodAutoscaler.spec.maxReplicas = 2;
+
+    // cpu: spec -> metrics -> resource -> targetAverageUtilization
+    this.lambda.spec.horizontalPodAutoscaler.spec.metrics[0].resource.targetAverageUtilization = this.functionSize[
+      'cpu'
+    ];
+
+    // memory: spec -> metrics -> type
+    //this.lambda.spec.horizontalPodAutoscaler.spec.metrics[1].type = "Resource";
+    // memory: spec -> metrics -> resource -> name
+    //this.lambda.spec.horizontalPodAutoscaler.spec.metrics[1].resource.name = "memory";
+    // memory: spec -> metrics -> resource -> targetAverageUtilization
+    //this.lambda.spec.horizontalPodAutoscaler.spec.metrics[1].resource.targetAverageUtilization = this.functionSize["memory"];
+
+    console.log(this.functionSize);
   }
 }

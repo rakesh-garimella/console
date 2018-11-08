@@ -24,6 +24,12 @@ import {
   Deployment,
 } from '../../shared/datamodel/k8s/deployment';
 import { GraphqlClientService } from '../../graphql-client/graphql-client.service';
+import {
+  HPAutoscaler,
+  IHPAutoscalerSpec,
+  IMetricResource,
+  IMetricSpec,
+} from '../../shared/datamodel/k8s/autoscaler';
 
 @Injectable()
 export class LambdaDetailsService {
@@ -95,11 +101,21 @@ export class LambdaDetailsService {
         'created-by': 'kubeless',
       },
     };
+
     const con: IContainer = {
       name: '',
       image: '',
       env: [],
-      resources: {},
+      resources: {
+        limits: {
+          cpu: '100m',
+          memory: '100Mi',
+        },
+        requests: {
+          cpu: '100m',
+          memory: '100Mi',
+        },
+      },
     };
 
     const podSpec: IPodTemplateSpec = {
@@ -130,6 +146,54 @@ export class LambdaDetailsService {
       selector: {},
     };
 
+    const mdScaler: IMetaData = {
+      name: '',
+      namespace: '',
+      labels: {
+        autoscaler: 'hpa',
+      },
+    };
+
+    const scaleTargetRef = {
+      apiVersion: 'apps/v1beta1',
+      kind: 'Deployment',
+      name: '',
+    };
+
+    const cpuResource: IMetricResource = {
+      name: 'cpu',
+      targetAverageUtilization: 1,
+    };
+
+    const memoryResource: IMetricResource = {
+      name: 'memory',
+      targetAverageUtilization: '128Mi',
+    };
+
+    const cpuMetricSpec: IMetricSpec = {
+      type: 'Resource',
+      resource: cpuResource,
+    };
+
+    const memoryMetricSpec: IMetricSpec = {
+      type: 'Resource',
+      resource: memoryResource,
+    };
+
+    const scalerSpec: IHPAutoscalerSpec = {
+      scaleTargetRef: scaleTargetRef,
+      maxReplicas: 2,
+      minReplicas: 1,
+      metrics: [cpuMetricSpec, memoryMetricSpec],
+    };
+
+    const hpAutoscaler = new HPAutoscaler({
+      kind: 'HorizontalPodAutoscaler',
+      apiVersion: 'autoscaling/v2beta1',
+      metadata: mdScaler,
+      spec: scalerSpec,
+    });
+
     const funcSpec: IFunctionSpec = {
       handler: 'handler.main',
       runtime: 'nodejs6',
@@ -138,6 +202,7 @@ export class LambdaDetailsService {
       type: 'HTTP',
       deployment: dep,
       service: svcSpec,
+      horizontalPodAutoscaler: hpAutoscaler,
     };
 
     const lambda = new Lambda({
